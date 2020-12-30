@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/signal"
 )
 
 const address = "0.0.0.0:8080"
@@ -22,45 +23,36 @@ func main() {
 	go hub.Run()
 	defer hub.Close()
 
-	listener, err := net.Listen("tcp", address)
-	handleErr(err)
-	defer listener.Close()
-	fmt.Println("TCP server started")
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, os.Interrupt)
 
-	go dataTCPConnection()
+	standardTCPConnection := NewTCPConnection(address, "Standard")
+	dataTCPConnection := NewTCPConnection(dataAddress, "Data")
 
-	for {
-		con, err := listener.Accept()
-		handleErr(err)
-		fmt.Println("DOWNLOADING DATA")
+	go standardTCPConnection.run(func(con net.Conn) {
 		client := NewClient(con, hub.incomingCommands)
 		client.read()
-	}
-}
+	})
 
-func dataTCPConnection() {
-	listener, err := net.Listen("tcp", dataAddress)
-	handleErr(err)
-	defer listener.Close()
-	fmt.Println("TCP DATA server started")
-
-	for {
-		con, err := listener.Accept()
-		handleErr(err)
-
-		err = streamFile(con)
+	go dataTCPConnection.run(func(con net.Conn) {
+		defer con.Close()
+		fmt.Println("DOWNLOADING DATA")
+		err := streamFile(con)
 		if err != nil {
 			fmt.Println("ERROR: ", err)
 			con.Write([]byte("ERROR\n"))
 		}
 		fmt.Println("closing connection")
-		con.Close()
-	}
+	})
+
+	s := <-signalChannel
+	fmt.Println(s)
 }
 
 func streamFile(con net.Conn) error {
 	// TODO: check said file exists.
-	file, err := os.Open("./1gbfile")
+	// file, err := os.Open("./1gbfile")
+	file, err := os.Open("./slowup.mp3")
 	handleErr(err)
 	defer file.Close()
 

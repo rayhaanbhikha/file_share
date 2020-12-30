@@ -18,6 +18,7 @@ func NewClient(con net.Conn, outbound chan<- *Command) *Client {
 }
 
 func (c *Client) read() {
+	fmt.Println("Client address: ", c.con.RemoteAddr())
 	for {
 		message, err := bufio.NewReader(c.con).ReadString('\n')
 		if err != nil {
