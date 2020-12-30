@@ -32,8 +32,7 @@ func (tcp *TCPConnection) Run(connectionHandler func(con net.Conn)) {
 	handleErr(err)
 	defer ln.Close()
 
-	fmt.Println(ln.Addr().Network())
-	message := fmt.Sprintf("%s TCP server started on %s\n", tcp.label, ln.Addr().String())
+	message := fmt.Sprintf("%s TCP server started on %s\n", tcp.label, address)
 	fmt.Println(message)
 
 	for {
