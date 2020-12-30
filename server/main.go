@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"net"
@@ -9,6 +8,7 @@ import (
 )
 
 const address = "127.0.0.1:8080"
+const dataAddress = "127.0.0.1:8081"
 
 func handleErr(err error) {
 	if err != nil {
@@ -18,59 +18,48 @@ func handleErr(err error) {
 
 func main() {
 
+	hub := NewHub()
+	go hub.Run()
+	defer hub.Close()
+
 	listener, err := net.Listen("tcp", address)
 	handleErr(err)
 	defer listener.Close()
-
 	fmt.Println("TCP server started")
+
+	go dataTCPConnection()
+
 	for {
 		con, err := listener.Accept()
 		handleErr(err)
 
-		// TODO: con.read()
-		go handleConnection(con)
+		client := NewClient(con, hub.incomingCommands)
+		client.read()
 	}
 }
 
-func handleConnection(con net.Conn) {
-	defer con.Close()
-	fmt.Print("---- CLIENT CONNECTED ----")
+func dataTCPConnection() {
+	listener, err := net.Listen("tcp", dataAddress)
+	handleErr(err)
+	defer listener.Close()
+	fmt.Println("TCP DATA server started")
+
 	for {
-		command, err := bufio.NewReader(con).ReadString('\n')
+		con, err := listener.Accept()
+		handleErr(err)
 
+		err = streamFile(con)
 		if err != nil {
-			if err == io.EOF {
-				fmt.Println("connection terminated")
-				return
-			} else {
-				fmt.Println("ERROR: ", err)
-				return
-			}
+			fmt.Println("ERROR: ", err)
+			con.Write([]byte("ERROR\n"))
 		}
-
-		switch command {
-		case "DOWNLOAD\r\n":
-			fmt.Println(command)
-			err = streamFile(con)
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				fmt.Println("complete")
-				// fmt.Fprintf(con, "\r\nCOMPLETE\r\n")
-			}
-			return
-		case "\r\n":
-			break
-		default:
-			message := "Command does not exist.\r\n"
-			fmt.Fprint(con, message)
-		}
+		fmt.Println("closing connection")
+		con.Close()
 	}
 }
 
 func streamFile(con net.Conn) error {
 	file, err := os.Open("./slowup.mp3")
-	// file, err := os.Open("./data.txt")
 	handleErr(err)
 	defer file.Close()
 
