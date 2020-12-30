@@ -34,6 +34,7 @@ func main() {
 	}
 
 	address := string(bytes.TrimSpace(bytes.Split(response, []byte(" "))[1]))
+
 	err = downloadFile(address)
 	if err != nil {
 		fmt.Println(err)
@@ -46,6 +47,8 @@ func downloadFile(address string) error {
 		return err
 	}
 	defer con.Close()
+
+	con.Write([]byte("STREAM\n"))
 
 	file, err := os.OpenFile("data.mp3", os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {

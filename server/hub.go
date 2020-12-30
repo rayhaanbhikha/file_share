@@ -2,8 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"net"
 
 	"github.com/rayhaanbhikha/file_share/packages/commands"
+	"github.com/rayhaanbhikha/file_share/packages/utils"
 )
 
 type Hub struct {
@@ -13,12 +16,12 @@ type Hub struct {
 	standardAddress  string
 }
 
-func NewHub(file *FileWrapper, standardAddress, dataAddress string) *Hub {
+func NewHub(file *FileWrapper, ip, standardPort, dataPort string) *Hub {
 	return &Hub{
 		incomingCommands: make(chan *Command),
 		file:             file,
-		dataAddress:      dataAddress,
-		standardAddress:  standardAddress,
+		standardAddress:  net.JoinHostPort(ip, standardPort),
+		dataAddress:      net.JoinHostPort(ip, dataPort),
 	}
 }
 
@@ -34,26 +37,48 @@ func (h *Hub) handleCommand(command *Command) {
 
 	switch command.id {
 	case commands.DlFile:
-		message = h.createFileMessage(command.body)
-		break
+		h.respondToFileDownload(command)
+		return
 	case commands.Ok:
-		message = "OK\n"
+		message = "OK"
+		command.sender.con.Write(utils.FormatStreamMessage(message))
 		break
+	case commands.Stream:
+		h.streamFile(command)
+		return
 	default:
-		message = "ERROR\n"
+		message = "ERROR"
+		command.sender.con.Write(utils.FormatStreamMessage(message))
+		return
 	}
-
-	bMessage := []byte(message)
-
-	command.sender.con.Write(bMessage)
 }
 
-func (h *Hub) createFileMessage(fileRequested string) string {
+func (h *Hub) respondToFileDownload(command *Command) {
+	fileRequested := command.body
+	var message string
+
 	if fileRequested != h.file.stat.Name() {
-		return "ERROR: file does not exist\n"
+		message = "ERROR: file does not exist"
+	} else {
+		message = fmt.Sprintf("%s %s", "D_ADDRESS", h.dataAddress)
 	}
 
-	return fmt.Sprintf("%s %s\n", "D_ADDRESS", h.dataAddress)
+	command.sender.con.Write(utils.FormatStreamMessage(message))
+}
+
+func (h *Hub) streamFile(command *Command) {
+	var message string
+
+	written, err := io.Copy(command.sender.con, h.file.file)
+	if err != nil {
+		fmt.Println("STREAMING error: ", err.Error())
+		message = "ERROR"
+		command.sender.con.Write(utils.FormatStreamMessage(message))
+	} else {
+		fmt.Println("Written: ", written)
+	}
+
+	command.sender.closeConnection()
 }
 
 func (h *Hub) Close() {

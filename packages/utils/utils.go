@@ -20,3 +20,7 @@ func GetIPv4Address() (net.IP, error) {
 	}
 	return []byte{}, errors.New("Cannot find IPv4 address")
 }
+
+func FormatStreamMessage(message string) []byte {
+	return []byte(message + "\n")
+}

@@ -11,34 +11,39 @@ import (
 type Client struct {
 	con      net.Conn
 	outbound chan<- *Command
+	done     chan int
 }
 
 func NewClient(con net.Conn, outbound chan<- *Command) *Client {
-	return &Client{con: con, outbound: outbound}
+	return &Client{con: con, outbound: outbound, done: make(chan int, 0)}
 }
 
 func (c *Client) read() {
+	defer c.con.Close()
 	fmt.Println("Client address: ", c.con.RemoteAddr())
-	for {
-		msg, err := bufio.NewReader(c.con).ReadBytes('\n')
-		if err != nil {
-			if err == io.EOF {
-				fmt.Println("connection terminated")
-				return
-			}
 
-			fmt.Println("ERROR: ", err)
-			// TODO: should you terminate connection if there was an error?
+	go func() {
+		for {
+			msg, err := bufio.NewReader(c.con).ReadBytes('\n')
+			if err != nil {
+				if err == io.EOF || c.con == nil {
+					fmt.Println("connection terminated")
+					return
+				}
+				fmt.Println("ERROR: ", err)
+			} else {
+				go c.handleMessage(msg)
+			}
 		}
-		go c.handleMessage(msg)
-	}
+	}()
+
+	<-c.done
+	return
 }
 
 func (c *Client) handleMessage(message []byte) {
 	cmd := bytes.ToUpper(bytes.TrimSpace(bytes.Split(message, []byte(" "))[0]))
 	args := bytes.TrimSpace(bytes.TrimPrefix(message, cmd))
-
-	// TODO: implement proper cmd and args validation.
 
 	command := string(cmd)
 	arguments := string(args)
@@ -53,4 +58,9 @@ func (c *Client) handleMessage(message []byte) {
 	}
 
 	c.outbound <- formattedCommand
+}
+
+func (c *Client) closeConnection() {
+	c.done <- 1
+	c.con = nil
 }

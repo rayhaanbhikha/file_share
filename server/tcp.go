@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-
-	"github.com/rayhaanbhikha/file_share/packages/utils"
 )
 
 type TCPConnection struct {
@@ -17,16 +15,7 @@ func NewTCPConnection(host, port, label string) *TCPConnection {
 	return &TCPConnection{host: host, port: port, label: label}
 }
 
-func (tcp *TCPConnection) GetExposedNetworkAddess() string {
-	ip, err := utils.GetIPv4Address()
-	if err != nil {
-		panic(err)
-	}
-	address := net.JoinHostPort(ip.String(), tcp.port)
-	return address
-}
-
-func (tcp *TCPConnection) Run(connectionHandler func(con net.Conn)) {
+func (tcp *TCPConnection) Run(hub *Hub) {
 	address := net.JoinHostPort(tcp.host, tcp.port)
 	ln, err := net.Listen("tcp", address)
 	handleErr(err)
@@ -39,6 +28,7 @@ func (tcp *TCPConnection) Run(connectionHandler func(con net.Conn)) {
 		con, err := ln.Accept()
 		handleErr(err)
 
-		go connectionHandler(con)
+		client := NewClient(con, hub.incomingCommands)
+		go client.read()
 	}
 }
