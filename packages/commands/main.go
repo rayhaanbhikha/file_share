@@ -7,6 +7,7 @@ const (
 	DAddress
 	Ok
 	Stream
+	FileName
 )
 
 var CommandMap map[string]CommandID = map[string]CommandID{
@@ -14,4 +15,5 @@ var CommandMap map[string]CommandID = map[string]CommandID{
 	"D_ADDRESS": DAddress,
 	"OK":        Ok,
 	"STREAM":    Stream,
+	"FILE_NAME": FileName,
 }

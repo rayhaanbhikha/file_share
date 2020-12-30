@@ -1,9 +1,10 @@
-package main
+package server
 
 import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 
 	"github.com/rayhaanbhikha/file_share/packages/commands"
 	"github.com/rayhaanbhikha/file_share/packages/utils"
@@ -42,9 +43,13 @@ func (h *Hub) handleCommand(command *Command) {
 	case commands.Ok:
 		message = "OK"
 		command.sender.con.Write(utils.FormatStreamMessage(message))
-		break
+		return
 	case commands.Stream:
 		h.streamFile(command)
+		return
+	case commands.FileName:
+		message = h.file.stat.Name()
+		command.sender.con.Write(utils.FormatStreamMessage(message))
 		return
 	default:
 		message = "ERROR"
@@ -69,7 +74,11 @@ func (h *Hub) respondToFileDownload(command *Command) {
 func (h *Hub) streamFile(command *Command) {
 	var message string
 
-	written, err := io.Copy(command.sender.con, h.file.file)
+	file, err := os.Open(h.file.filePath)
+	handleErr(err)
+	defer file.Close()
+
+	written, err := io.Copy(command.sender.con, file)
 	if err != nil {
 		fmt.Println("STREAMING error: ", err.Error())
 		message = "ERROR"

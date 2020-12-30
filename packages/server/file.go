@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"fmt"
@@ -16,20 +16,12 @@ func NewFile(filePath string) *FileWrapper {
 }
 
 func (f *FileWrapper) Init() error {
-	file, err := os.Open(f.filePath)
-	handleErr(err)
-	f.file = file
-
 	stat, err := os.Stat(f.filePath)
 	if err != nil {
 		return err
 	}
 	f.stat = stat
 	return nil
-}
-
-func (f *FileWrapper) Close() {
-	f.file.Close()
 }
 
 func (f *FileWrapper) HandleError(err error) {

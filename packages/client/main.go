@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"bufio"
@@ -10,7 +10,7 @@ import (
 	"path"
 )
 
-const outputDirectory = "../data"
+const outputDirectory = "./data"
 
 func handleErr(err error) {
 	if err != nil {
@@ -18,27 +18,29 @@ func handleErr(err error) {
 	}
 }
 
-func main() {
-
-	fileRequested := "slowup.mp3"
-
-	con, err := net.Dial("tcp", "127.0.0.1:8080")
+func Run(address string) {
+	con, err := net.Dial("tcp", address)
 	handleErr(err)
 	defer con.Close()
+
+	con.Write([]byte("FILE_NAME\n"))
+	response, err := bufio.NewReader(con).ReadBytes('\n')
+	fileRequested := string(bytes.TrimSpace(bytes.Split(response, []byte(" "))[0]))
+	fmt.Println(fileRequested)
 
 	// TODO: fixme.
 	message := fmt.Sprintf("%s %s\n", "DL_FILE", fileRequested)
 	con.Write([]byte(message))
 
-	response, err := bufio.NewReader(con).ReadBytes('\n')
+	response, err = bufio.NewReader(con).ReadBytes('\n')
 	if err != nil {
 		fmt.Println("downloading error", err)
 		return
 	}
 
-	address := string(bytes.TrimSpace(bytes.Split(response, []byte(" "))[1]))
+	dataAddress := string(bytes.TrimSpace(bytes.Split(response, []byte(" "))[1]))
 
-	err = downloadFile(address, fileRequested)
+	err = downloadFile(dataAddress, fileRequested)
 	if err != nil {
 		fmt.Println(err)
 	}

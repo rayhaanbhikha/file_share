@@ -1,7 +1,6 @@
-package main
+package server
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -19,20 +18,7 @@ func handleErr(err error) {
 	}
 }
 
-var filePath string
-
-func init() {
-	flag.StringVar(&filePath, "filePath", "", "Path to file")
-
-	flag.Parse()
-
-	if filePath == "" {
-		fmt.Println("filePath argument must be provided")
-		os.Exit(1)
-	}
-}
-
-func main() {
+func Run(filePath string) {
 	// Validate file.
 	file := NewFile(filePath)
 	err := file.Init()
@@ -40,7 +26,6 @@ func main() {
 		file.HandleError(err)
 		return
 	}
-	defer file.Close()
 	// #############################################
 
 	ip, err := utils.GetIPv4Address()
