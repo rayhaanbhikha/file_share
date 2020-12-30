@@ -7,8 +7,8 @@ import (
 	"os"
 )
 
-const address = "127.0.0.1:8080"
-const dataAddress = "127.0.0.1:8081"
+const address = "0.0.0.0:8080"
+const dataAddress = "0.0.0.0:8081"
 
 func handleErr(err error) {
 	if err != nil {
@@ -32,7 +32,7 @@ func main() {
 	for {
 		con, err := listener.Accept()
 		handleErr(err)
-
+		fmt.Println("DOWNLOADING DATA")
 		client := NewClient(con, hub.incomingCommands)
 		client.read()
 	}
@@ -59,7 +59,8 @@ func dataTCPConnection() {
 }
 
 func streamFile(con net.Conn) error {
-	file, err := os.Open("./slowup.mp3")
+	// TODO: check said file exists.
+	file, err := os.Open("./1gbfile")
 	handleErr(err)
 	defer file.Close()
 
