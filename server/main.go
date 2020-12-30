@@ -34,19 +34,21 @@ func main() {
 		client.read()
 	})
 
-	go dataTCPConnection.run(func(con net.Conn) {
-		defer con.Close()
-		fmt.Println("DOWNLOADING DATA")
-		err := streamFile(con)
-		if err != nil {
-			fmt.Println("ERROR: ", err)
-			con.Write([]byte("ERROR\n"))
-		}
-		fmt.Println("closing connection")
-	})
+	go dataTCPConnection.run(handleDataTCPConnection)
 
 	s := <-signalChannel
 	fmt.Println(s)
+}
+
+func handleDataTCPConnection(con net.Conn) {
+	defer con.Close()
+	fmt.Println("DOWNLOADING DATA")
+	err := streamFile(con)
+	if err != nil {
+		fmt.Println("ERROR: ", err)
+		con.Write([]byte("ERROR\n"))
+	}
+	fmt.Println("closing connection")
 }
 
 func streamFile(con net.Conn) error {
