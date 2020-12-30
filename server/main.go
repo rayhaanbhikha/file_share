@@ -23,7 +23,7 @@ func main() {
 	go hub.Run()
 	defer hub.Close()
 
-	signalChannel := make(chan os.Signal, 1)
+	signalChannel := make(chan os.Signal)
 	signal.Notify(signalChannel, os.Interrupt)
 
 	standardTCPConnection := NewTCPConnection(address, "Standard")
