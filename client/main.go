@@ -2,11 +2,11 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"net"
 	"os"
-	"strings"
 )
 
 func handleErr(err error) {
@@ -16,31 +16,32 @@ func handleErr(err error) {
 }
 
 func main() {
+
+	fileRequested := "slowup.mp3"
+
 	con, err := net.Dial("tcp", "127.0.0.1:8080")
 	handleErr(err)
 	defer con.Close()
 
 	// TODO: fixme.
-	downloadMessage := []byte("DL_FILE some-file\n")
-	con.Write(downloadMessage)
+	message := fmt.Sprintf("%s %s\n", "DL_FILE", fileRequested)
+	con.Write([]byte(message))
 
-	response, err := bufio.NewReader(con).ReadString('\n')
+	response, err := bufio.NewReader(con).ReadBytes('\n')
 	if err != nil {
 		fmt.Println("downloading error", err)
 		return
 	}
 
-	dataAddress := strings.Split(strings.TrimRight(response, "\n"), " ")[1]
-	fmt.Println(dataAddress)
-
-	err = downloadFile(dataAddress)
+	address := string(bytes.TrimSpace(bytes.Split(response, []byte(" "))[1]))
+	err = downloadFile(address)
 	if err != nil {
 		fmt.Println(err)
 	}
 }
 
 func downloadFile(address string) error {
-	con, err := net.Dial("tcp", "127.0.0.1:8081")
+	con, err := net.Dial("tcp", address)
 	if err != nil {
 		return err
 	}

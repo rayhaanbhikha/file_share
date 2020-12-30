@@ -2,10 +2,10 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"net"
-	"strings"
 )
 
 type Client struct {
@@ -20,7 +20,7 @@ func NewClient(con net.Conn, outbound chan<- *Command) *Client {
 func (c *Client) read() {
 	fmt.Println("Client address: ", c.con.RemoteAddr())
 	for {
-		message, err := bufio.NewReader(c.con).ReadString('\n')
+		msg, err := bufio.NewReader(c.con).ReadBytes('\n')
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println("connection terminated")
@@ -30,22 +30,21 @@ func (c *Client) read() {
 			fmt.Println("ERROR: ", err)
 			// TODO: should you terminate connection if there was an error?
 		}
-		go c.handleMessage(message)
+		go c.handleMessage(msg)
 	}
 }
 
-func (c *Client) handleMessage(message string) {
-	parsedCmd := strings.Split(message, " ")
+func (c *Client) handleMessage(message []byte) {
+	cmd := bytes.ToUpper(bytes.TrimSpace(bytes.Split(message, []byte(" "))[0]))
+	args := bytes.TrimSpace(bytes.TrimPrefix(message, cmd))
 
-	//FIXME:
-	if len(parsedCmd) != 2 {
-		c.con.Write([]byte("ERROR\n"))
-		return
-	}
+	// TODO: implement proper cmd and args validation.
 
-	cmd := strings.ToUpper(parsedCmd[0])
-	body := parsedCmd[1]
-	command, err := NewCommand(c, cmd, body)
+	command := string(cmd)
+	arguments := string(args)
+	fmt.Println("COMMAND: ", command, arguments)
+
+	formattedCommand, err := NewCommand(c, command, arguments)
 
 	if err != nil {
 		// TODO: handle errors better.
@@ -53,5 +52,5 @@ func (c *Client) handleMessage(message string) {
 		return
 	}
 
-	c.outbound <- command
+	c.outbound <- formattedCommand
 }

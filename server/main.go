@@ -8,8 +8,8 @@ import (
 	"os/signal"
 )
 
-const address = "0.0.0.0:8080"
-const dataAddress = "0.0.0.0:8081"
+const address = "0.0.0.0"
+const dataAddress = "0.0.0.0"
 
 func handleErr(err error) {
 	if err != nil {
@@ -19,22 +19,35 @@ func handleErr(err error) {
 
 func main() {
 
-	hub := NewHub()
-	go hub.Run()
-	defer hub.Close()
+	// Validate file.
+	filePath := "./slowup.mp3"
+	file := NewFile(filePath)
+	err := file.Init()
+	if err != nil {
+		file.HandleError(err)
+		return
+	}
+
+	// #############################################
 
 	signalChannel := make(chan os.Signal)
 	signal.Notify(signalChannel, os.Interrupt)
 
-	standardTCPConnection := NewTCPConnection(address, "Standard")
-	dataTCPConnection := NewTCPConnection(dataAddress, "Data")
+	standardTCPConnection := NewTCPConnection(address, "8080", "Standard")
+	dataTCPConnection := NewTCPConnection(dataAddress, "8081", "Data")
 
-	go standardTCPConnection.run(func(con net.Conn) {
+	hub := NewHub(file, standardTCPConnection.GetExposedNetworkAddess(), dataTCPConnection.GetExposedNetworkAddess())
+	go hub.Run()
+	defer hub.Close()
+
+	fmt.Println(standardTCPConnection.GetExposedNetworkAddess())
+
+	go standardTCPConnection.Run(func(con net.Conn) {
 		client := NewClient(con, hub.incomingCommands)
 		client.read()
 	})
 
-	go dataTCPConnection.run(handleDataTCPConnection)
+	go dataTCPConnection.Run(handleDataTCPConnection)
 
 	s := <-signalChannel
 	fmt.Println(s)

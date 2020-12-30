@@ -1,30 +1,42 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/rayhaanbhikha/file_share/packages/commands"
+)
 
 type Hub struct {
+	file             *FileWrapper
 	incomingCommands chan *Command
+	dataAddress      string
+	standardAddress  string
 }
 
-func NewHub() *Hub {
-	return &Hub{incomingCommands: make(chan *Command)}
+func NewHub(file *FileWrapper, standardAddress, dataAddress string) *Hub {
+	return &Hub{
+		incomingCommands: make(chan *Command),
+		file:             file,
+		dataAddress:      dataAddress,
+		standardAddress:  standardAddress,
+	}
 }
 
 func (h *Hub) Run() {
 	for incomingCommand := range h.incomingCommands {
-		fmt.Println("command: ", incomingCommand.id)
 		h.handleCommand(incomingCommand)
 	}
 }
 
 func (h *Hub) handleCommand(command *Command) {
 	var message string
+	fmt.Println("Command", command.id, command.body)
+
 	switch command.id {
-	case 0:
-		// FIXME: should be in config.
-		message = "D_ADDRESS 127.0.0.1:8081\n"
+	case commands.DlFile:
+		message = h.createFileMessage(command.body)
 		break
-	case 2:
+	case commands.Ok:
 		message = "OK\n"
 		break
 	default:
@@ -34,6 +46,14 @@ func (h *Hub) handleCommand(command *Command) {
 	bMessage := []byte(message)
 
 	command.sender.con.Write(bMessage)
+}
+
+func (h *Hub) createFileMessage(fileRequested string) string {
+	if fileRequested != h.file.stat.Name() {
+		return "ERROR: file does not exist\n"
+	}
+
+	return fmt.Sprintf("%s %s\n", "D_ADDRESS", h.dataAddress)
 }
 
 func (h *Hub) Close() {
