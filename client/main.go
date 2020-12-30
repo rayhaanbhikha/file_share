@@ -7,7 +7,10 @@ import (
 	"io"
 	"net"
 	"os"
+	"path"
 )
+
+const outputDirectory = "../data"
 
 func handleErr(err error) {
 	if err != nil {
@@ -35,13 +38,13 @@ func main() {
 
 	address := string(bytes.TrimSpace(bytes.Split(response, []byte(" "))[1]))
 
-	err = downloadFile(address)
+	err = downloadFile(address, fileRequested)
 	if err != nil {
 		fmt.Println(err)
 	}
 }
 
-func downloadFile(address string) error {
+func downloadFile(address string, output string) error {
 	con, err := net.Dial("tcp", address)
 	if err != nil {
 		return err
@@ -50,7 +53,7 @@ func downloadFile(address string) error {
 
 	con.Write([]byte("STREAM\n"))
 
-	file, err := os.OpenFile("data.mp3", os.O_RDWR|os.O_CREATE, 0755)
+	file, err := os.OpenFile(path.Join(outputDirectory, output), os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		return err
 	}

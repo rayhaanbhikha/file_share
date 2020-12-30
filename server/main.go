@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -18,10 +19,21 @@ func handleErr(err error) {
 	}
 }
 
-func main() {
+var filePath string
 
+func init() {
+	flag.StringVar(&filePath, "filePath", "", "Path to file")
+
+	flag.Parse()
+
+	if filePath == "" {
+		fmt.Println("filePath argument must be provided")
+		os.Exit(1)
+	}
+}
+
+func main() {
 	// Validate file.
-	filePath := "../data_egress/slowup.mp3"
 	file := NewFile(filePath)
 	err := file.Init()
 	if err != nil {
