@@ -14,7 +14,8 @@ const defaultIPAddress = "0.0.0.0"
 
 func handleErr(err error) {
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
